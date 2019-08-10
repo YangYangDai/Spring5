@@ -180,7 +180,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Nullable
 	private volatile String[] frozenBeanDefinitionNames;
 
-	/** Whether bean definition metadata may be cached for all beans */
+	/**
+	 * 是否可以缓存所有bean的bean定义元数据
+	 * true 说明bean 定义解析、加载、注册已经结束了 
+	 */
 	private volatile boolean configurationFrozen = false;
 
 
@@ -729,16 +732,18 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		if (logger.isDebugEnabled()) {
 			logger.debug("Pre-instantiating singletons in " + this);
 		}
-
-		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
-		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		//获取所有在xml中配置的bean的名称
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
-		// Trigger initialization of all non-lazy singleton beans...
+		//所有非懒加载的单例bean的初始化
 		for (String beanName : beanNames) {
+			//这里我们就默认<bean>标签里面没有配置parent这个属性 拿到的就是beanName对应的BeanDefinition对象的数据copy
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			//beanDefinition不是抽象的且是单例的且不是懒加载的才会进行初始化
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				//判断是不是工厂bean
 				if (isFactoryBean(beanName)) {
+					//是工厂bean的话需要在beanName之前加上&
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						final FactoryBean<?> factory = (FactoryBean<?>) bean;
@@ -758,6 +763,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}
 				}
 				else {
+					//如果不是工厂bean的话 直接是beanName
+					//我们经常用来从 BeanFactory 中获取一个 Bean，而初始化的过程也封装到了这个方法里。
 					getBean(beanName);
 				}
 			}
